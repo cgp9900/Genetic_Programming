@@ -1,8 +1,6 @@
 import itertools
 import random
 
-import numpy as np
-import pandas as pd
 from sklearn.cluster import DBSCAN, HDBSCAN, KMeans
 from sklearn.metrics import silhouette_score
 from sklearn_extra.cluster import KMedoids
@@ -65,7 +63,7 @@ def cluster_fitness(population, data):
             model.fit(data)
             curr_score = silhouette_score(data, model.labels_)
             fitness_indices[model] = curr_score
-        except:
+        except Exception:
             fitness_indices[model] = -1
 
     # Sort scoring to get most performant models at the top
@@ -111,7 +109,7 @@ def crossover(dict_selected_pop, model_params, repeat=3):
         rand_model = list(model_params[rand_num].keys())[0]
         try:
             len_check = len(dict_selected_pop_agg[rand_model])
-        except:
+        except Exception:
             len_check = 0
         if len_check > 1:
             rand_nums = random.sample(
@@ -167,7 +165,7 @@ def mutation(dict_selected_pop, model_params, param_values, repeat=2):
         try:
             rand_new_value = random.choice(param_values[rand_param_switch])
             flag_raise = 0
-        except:
+        except Exception:
             flag_raise = 1
 
         if flag_raise == 1:
@@ -189,7 +187,7 @@ def mutation(dict_selected_pop, model_params, param_values, repeat=2):
     return dict_selected_pop
 
 
-## Defining the evolution function - combines all previous functions and applies them iteratively
+# Defining the evolution function - combines all previous functions and applies them iteratively
 
 
 def evolution(
