@@ -229,11 +229,10 @@ def evolution(
             evaluation_i = cluster_fitness(population=next_population, data=df)
             score = [element for element in evaluation_i.values()][0]
             print(
-                f"Top model is {[model for model in evaluation_i.keys()][0]} and associated score is {score}"
+                f"Top model: {[model for model in evaluation_i.keys()][0]}, associated score: {score}"
             )
             model_hold[[model for model in evaluation_i.keys()][0]] = score
             i += 1
         else:
             break
-
     return sorted(model_hold.items(), reverse=True, key=lambda item: item[1])[:10]
