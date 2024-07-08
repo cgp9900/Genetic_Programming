@@ -96,6 +96,9 @@ def population_selection(dict_fitness, selection_param=0.7):
 
 def crossover(dict_selected_pop, model_params, repeat=3):
     dict_selected_pop_agg = {}
+
+    # Split all models in the population and insert into dictionary by the model type.
+    # This allows us to check for if there are enough models of a certain type to crossover.
     for model in dict_selected_pop.keys():
         model_name = type(model).__name__
         if model_name in dict_selected_pop_agg.keys():
@@ -104,20 +107,25 @@ def crossover(dict_selected_pop, model_params, repeat=3):
             dict_selected_pop_agg[model_name] = [[model]]
 
     count = 0
+    # Runs until we have completed crossover by the number specified
     while count < repeat:
+        # Retrieiving a random model
         rand_num = random.randint(0, len(model_params) - 1)
         rand_model = list(model_params[rand_num].keys())[0]
+        # Are there enough models of the retrieved type to crossover?
         try:
             len_check = len(dict_selected_pop_agg[rand_model])
         except Exception:
             len_check = 0
         if len_check > 1:
+            # Random number to determine which models to crossover
             rand_nums = random.sample(
                 range(0, len(dict_selected_pop_agg[rand_model])), 2
             )
             model1 = dict_selected_pop_agg[rand_model][rand_nums[0]][0]
             model2 = dict_selected_pop_agg[rand_model][rand_nums[1]][0]
             half_param_length = int(len(model1.get_params()) / 2)
+            # Take half the parameters of the first model and combine with half from second
             model1_param_extract = [{k: v} for k, v in model1.get_params().items()][
                 0:half_param_length
             ]
@@ -130,6 +138,7 @@ def crossover(dict_selected_pop, model_params, repeat=3):
                 for single_dict in model_params_combine
                 for k, v in single_dict.items()
             }
+            # Instantiating model with the correct object
             new_model = instantiate_model(rand_model).set_params(
                 **dict_model_params_mapping
             )
@@ -147,10 +156,12 @@ def crossover(dict_selected_pop, model_params, repeat=3):
 def mutation(dict_selected_pop, model_params, param_values, repeat=2):
     count = 0
     while count < repeat:
+        # Randomly pulling model to mutate and parameter to switch
         curr_rand_model = random.choice(list(dict_selected_pop.keys()))
         curr_rand_model_name = type(curr_rand_model).__name__
         curr_rand_model_params = curr_rand_model.get_params()
         rand_param_switch = random.choice(list(curr_rand_model_params.keys()))
+        # Temporary renaming of metric parameters so they fit with input dictionary structure
         if rand_param_switch == "metric" and (
             curr_rand_model_name == "KMedoids" or curr_rand_model_name == "DBSCAN"
         ):
@@ -161,7 +172,7 @@ def mutation(dict_selected_pop, model_params, param_values, repeat=2):
             rand_param_switch == "eps"
         else:
             pass
-
+        # Generate the random new hyperparameter value to use in the model
         try:
             rand_new_value = random.choice(param_values[rand_param_switch])
             flag_raise = 0
@@ -171,6 +182,7 @@ def mutation(dict_selected_pop, model_params, param_values, repeat=2):
         if flag_raise == 1:
             pass
         else:
+            # Switch from input dictionary naming convention to model object naming
             if rand_param_switch == "metric_1" or rand_param_switch == "metric_2":
                 rand_param_switch = "metric"
             elif rand_param_switch == "eps" and curr_rand_model_name == "HDBSCAN":
@@ -178,6 +190,7 @@ def mutation(dict_selected_pop, model_params, param_values, repeat=2):
             else:
                 pass
             curr_rand_model_params[rand_param_switch] = rand_new_value
+            # Instantiating model with correct object
             new_model = instantiate_model(curr_rand_model_name).set_params(
                 **curr_rand_model_params
             )
@@ -200,17 +213,22 @@ def evolution(
     mutation_repeat,
     cutoff_score,
 ):
+    # Generate the initial population and evaluate fitness, pulling the top score
     init_pop = init_population(model_params, param_values, init_population_num)
     first_fitness_eval = cluster_fitness(population=init_pop, data=df)
     score = [element for element in first_fitness_eval.values()][0]
     model_hold = {}
+    # Initial check of if model is above our performance threshold - if so, return it
     if score < cutoff_score:
         evaluation_i = first_fitness_eval
     else:
         return [model for model in first_fitness_eval.keys()][0], score
     i = 0
+    # Run while the score is below the cutoff, or until 70 runs are complete.
     while score < cutoff_score:
         if i < 70:
+            # Select the resulting population from the initial population and perform
+            # the evolution steps
             select_i = population_selection(
                 evaluation_i, selection_param=selection_param
             )
@@ -227,12 +245,15 @@ def evolution(
             )
             next_population = [model_name for model_name in mutation_i.keys()]
             evaluation_i = cluster_fitness(population=next_population, data=df)
+            # Top score for the model - pull first element since it's already sorted
             score = [element for element in evaluation_i.values()][0]
             print(
                 f"Top model: {[model for model in evaluation_i.keys()][0]}, associated score: {score}"
             )
+            # Storing top performing models from each run for the final function return
             model_hold[[model for model in evaluation_i.keys()][0]] = score
             i += 1
         else:
             break
+    # Print the top 10 performant models.
     return sorted(model_hold.items(), reverse=True, key=lambda item: item[1])[:10]
